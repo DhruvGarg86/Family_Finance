@@ -32,6 +32,19 @@ app.get("/family", async (req, res) => {
   res.send(family);
 });
 
+// Get All Members
+app.get("/members", async (req, res) => {
+  const members = await Member.find();
+  res.send(members);
+});
+
+// Delete Member
+app.delete("/delete-member/:id", async (req, res) => {
+  await Member.findByIdAndDelete(req.params.id);
+  res.send("Member Deleted");
+});
+
+
 
 // ✅ Add Member
 app.post("/add-member", async (req, res) => {
