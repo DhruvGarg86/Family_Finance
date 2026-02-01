@@ -105,5 +105,23 @@ app.put("/reject/:id", async (req, res) => {
   res.send("Rejected");
 });
 
+// ✅ Verify Family PIN
+app.post("/verify-pin", async (req, res) => {
+  const { pin } = req.body;
+
+  const family = await Family.findOne();
+
+  if (!family) {
+    return res.status(404).json({ success: false });
+  }
+
+  if (family.familyPinHash === pin) {
+    res.json({ success: true });
+  } else {
+    res.json({ success: false });
+  }
+});
+
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));
