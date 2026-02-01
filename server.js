@@ -9,7 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-mongoose.connect("mongodb+srv://dhruvgarg086_db_user:NgZ30b8pO2utqiXG@cluster0.kekvewg.mongodb.net/?appName=Cluster0")
+mongoose.connect("mongodb+srv://dhruvgarg086_db_user:NgZ30b8pO2utqiXG@cluster0.kekvewg.mongodb.net/familyDB?retryWrites=true&w=majority")
 .then(() => console.log("MongoDB Connected"))
 .catch(err => console.log(err));
 
