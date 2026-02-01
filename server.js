@@ -26,6 +26,13 @@ app.post("/setup-family", async (req, res) => {
   res.send("Family Created");
 });
 
+// ✅ Get Family Details
+app.get("/family", async (req, res) => {
+  const family = await Family.findOne();
+  res.send(family);
+});
+
+
 // ✅ Add Member
 app.post("/add-member", async (req, res) => {
   const { familyId, name } = req.body;
