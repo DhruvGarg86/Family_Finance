@@ -4,6 +4,8 @@ const cors = require("cors");
 const Family = require("./models/Family");
 const Member = require("./models/Member");
 const Transaction = require("./models/Transaction");
+const RecurringIncome = require("./models/RecurringIncome");
+
 
 const app = express();
 app.use(cors());
@@ -120,6 +122,102 @@ app.post("/verify-pin", async (req, res) => {
   } else {
     res.json({ success: false });
   }
+});
+// Get Transactions for a Member
+app.get("/transactions/:member", async (req, res) => {
+  const txns = await Transaction.find({
+    $or: [
+      { addedBy: req.params.member },
+      { forMember: req.params.member }
+    ]
+  }).sort({ createdAt: -1 });
+
+  res.send(txns);
+});
+// Financial Summary for Member
+app.get("/summary/:member", async (req, res) => {
+  const member = req.params.member;
+
+  const sumByType = async (type) => {
+    const result = await Transaction.aggregate([
+      { $match: { forMember: member, type: type, status: "Approved" } },
+      { $group: { _id: null, total: { $sum: "$amount" } } }
+    ]);
+    return result[0]?.total || 0;
+  };
+
+  const income = await sumByType("Income");
+  const expense = await sumByType("Expense");
+  const savings = await sumByType("Saving");
+  const investments = await sumByType("Investment");
+
+  res.json({
+    income,
+    expense,
+    savings,
+    investments,
+    balance: income - expense
+  });
+});
+app.get("/recent/:member", async (req, res) => {
+  const txns = await Transaction.find({ forMember: req.params.member })
+    .sort({ createdAt: -1 })
+    .limit(5);
+
+  res.send(txns);
+});
+
+// Add Recurring Income
+app.post("/recurring", async (req, res) => {
+  const recurring = new RecurringIncome(req.body);
+  await recurring.save();
+  res.send(recurring);
+});
+
+// Get Recurring Incomes for Member
+app.get("/recurring/:member", async (req, res) => {
+  const list = await RecurringIncome.find({ member: req.params.member });
+  res.send(list);
+});
+
+// Mark Recurring Income as Received
+app.put("/recurring/received/:id", async (req, res) => {
+  const recurring = await RecurringIncome.findById(req.params.id);
+  recurring.lastReceived = new Date();
+  await recurring.save();
+
+  // Automatically add income transaction
+  await Transaction.create({
+    familyId: req.body.familyId,
+    amount: recurring.amount,
+    type: "Income",
+    category: "Recurring",
+    source: recurring.title,
+    target: "Self",
+    paymentMode: "Bank",
+    bankName: "",
+    addedBy: recurring.member,
+    forMember: recurring.member,
+    status: "Approved",
+    approvedBy: recurring.member
+  });
+
+  res.send("Marked as received");
+});
+app.get("/profile/:member", async (req, res) => {
+  const total = await Transaction.countDocuments({ forMember: req.params.member });
+  const pending = await Transaction.countDocuments({
+    approvalRequiredFrom: req.params.member,
+    status: "Pending"
+  });
+
+  const member = await Member.findOne({ name: req.params.member });
+
+  res.json({
+    totalTransactions: total,
+    pendingApprovals: pending,
+    joinedDate: member?.createdAt
+  });
 });
 
 
